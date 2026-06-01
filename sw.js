@@ -1,4 +1,4 @@
-const CACHE = 'recipebox-v1';
+const CACHE = 'recipebox-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -22,11 +22,30 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then(cached =>
-      cached || fetch(e.request).then(res => {
+  const req = e.request;
+  const isPage = req.mode === 'navigate' ||
+    (req.destination === 'document') ||
+    req.url.endsWith('/') || req.url.endsWith('index.html');
+
+  if (isPage) {
+    // Network-first: always try to get the latest page when online,
+    // fall back to the cached copy when offline.
+    e.respondWith(
+      fetch(req).then(res => {
         const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+        return res;
+      }).catch(() => caches.match(req).then(c => c || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Cache-first for everything else (icons, manifest) — fast and offline-friendly.
+  e.respondWith(
+    caches.match(req).then(cached =>
+      cached || fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
         return res;
       }).catch(() => cached)
     )
