@@ -1,8 +1,9 @@
-const CACHE = 'recipebox-v2';
+const CACHE = 'recipebox-v4';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './recipes.json',
   './icon-192.png',
   './icon-512.png',
   './icon-512-maskable.png'
@@ -23,9 +24,12 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const req = e.request;
+  // Only handle same-origin requests; let Firebase/CDN/network calls pass through.
+  if (new URL(req.url).origin !== self.location.origin) return;
   const isPage = req.mode === 'navigate' ||
     (req.destination === 'document') ||
-    req.url.endsWith('/') || req.url.endsWith('index.html');
+    req.url.endsWith('/') || req.url.endsWith('index.html') ||
+    req.url.includes('recipes.json');
 
   if (isPage) {
     // Network-first: always try to get the latest page when online,

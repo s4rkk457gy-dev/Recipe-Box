@@ -63,6 +63,11 @@ header{
 }
 .menu-btn:hover{background:rgba(247,240,228,.28)}
 .menu-btn:active{transform:scale(.93)}
+.menu-btn{position:relative}
+.sync-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#d9b14a;box-shadow:0 0 0 2px var(--terra)}
+.sync-dot[data-state="synced"]{background:#5fbf7e}
+.sync-dot[data-state="connecting"]{background:#d9b14a}
+.sync-dot[data-state="offline"]{background:#cf6a5a}
 .backup-note{font-size:14px;line-height:1.55;color:var(--ink-soft);margin-bottom:18px}
 .search{margin-top:16px;position:relative;}
 .search input{
@@ -229,7 +234,7 @@ header{
           <div class="sub" id="sub">Your personal cookbook</div>
         </div>
       </div>
-      <button class="menu-btn" onclick="openBackup()" aria-label="Backup and restore">⤓</button>
+      <button class="menu-btn" onclick="openBackup()" aria-label="Backup and restore"><span class="sync-dot" id="sync-dot" data-state="connecting"></span>⤓</button>
     </div>
     <div class="search">
       <span class="ico">🔍</span>
@@ -285,29 +290,64 @@ const UNIT_ABBR = { 'Tablespoon':'tbsp', 'Teaspoon':'tsp', 'Grams':'g', 'Ounces'
 
 let recipes = [];
 let cats = [];
+let removedRecipeIds = [];
+let removedCatNames = [];
 let activeCat = 'All';
 let editingId = null;
 let pickedEmoji = '🍴';
 
 try { recipes = JSON.parse(localStorage.getItem('recipebox')||'[]'); } catch(e){ recipes = []; }
 try { cats = JSON.parse(localStorage.getItem('recipebox_cats')||'null'); } catch(e){ cats = null; }
+try { removedRecipeIds = JSON.parse(localStorage.getItem('recipebox_removed')||'[]'); } catch(e){ removedRecipeIds = []; }
+try { removedCatNames = JSON.parse(localStorage.getItem('recipebox_removed_cats')||'[]'); } catch(e){ removedCatNames = []; }
 if(!Array.isArray(cats) || !cats.length){ cats = DEFAULT_CATS.map(c=>({...c})); }
-
-if(!localStorage.getItem('recipebox_seeded')){
-  if(recipes.length===0){
-    recipes.push({
-      id:Date.now(), name:'Weekend Pancakes', cat:'Breakfast',
-      time:'20 min', servings:'4', desc:'Fluffy, golden, and impossible to mess up.',
-      ingredients:'1½ cups flour\n3½ tsp baking powder\n1 tsp salt\n1 tbsp sugar\n1¼ cups milk\n1 egg\n3 tbsp melted butter',
-      steps:'Mix the dry ingredients in a bowl.\nMake a well, add milk, egg, and butter.\nWhisk until smooth.\nPour ¼ cup onto a hot greased griddle.\nFlip when bubbles form; cook until golden.'
-    });
-  }
-  localStorage.setItem('recipebox_seeded','1');
-  save();
-}
 
 function save(){ try{ localStorage.setItem('recipebox', JSON.stringify(recipes)); }catch(e){} }
 function saveCats(){ try{ localStorage.setItem('recipebox_cats', JSON.stringify(cats)); }catch(e){} }
+function saveRemoved(){
+  try{
+    localStorage.setItem('recipebox_removed', JSON.stringify(removedRecipeIds));
+    localStorage.setItem('recipebox_removed_cats', JSON.stringify(removedCatNames));
+  }catch(e){}
+}
+
+// ---- Cloud sync hooks (wired up by the Firebase module below) ----
+// window.cloudPush(state) is set once Firebase is ready; until then writes
+// just stay local and get pushed when the connection comes up.
+let lastCloudJSON = '';
+function currentState(){
+  return { recipes, cats, removedRecipeIds, removedCatNames };
+}
+function pushCloud(){
+  try{
+    const json = JSON.stringify(currentState());
+    lastCloudJSON = json;
+    if(typeof window.cloudPush === 'function') window.cloudPush(currentState());
+  }catch(e){}
+}
+// Called by the Firebase listener when remote data arrives.
+function applyCloud(data){
+  if(!data || typeof data !== 'object') return;
+  const json = JSON.stringify({
+    recipes: data.recipes||[], cats: data.cats||[],
+    removedRecipeIds: data.removedRecipeIds||[], removedCatNames: data.removedCatNames||[]
+  });
+  if(json === lastCloudJSON) return; // it's our own write echoing back — ignore
+  lastCloudJSON = json;
+  if(Array.isArray(data.recipes)) recipes = data.recipes;
+  if(Array.isArray(data.cats) && data.cats.length) cats = data.cats;
+  if(Array.isArray(data.removedRecipeIds)) removedRecipeIds = data.removedRecipeIds;
+  if(Array.isArray(data.removedCatNames)) removedCatNames = data.removedCatNames;
+  save(); saveCats(); saveRemoved();
+  render();
+}
+window.applyCloud = applyCloud;
+window.currentStateBridge = currentState;
+function setSyncStatus(state){
+  const el = document.getElementById('sync-dot');
+  if(el) el.dataset.state = state;
+}
+window.setSyncStatus = setSyncStatus;
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function catNames(){ return cats.map(c=>c.name); }
 function st(name){ return cats.find(c=>c.name===name) || NEUTRAL; }
@@ -425,6 +465,7 @@ function addCat(){
   const color = PALETTE[cats.length % PALETTE.length];
   cats.push({name, e:pickedEmoji, bg:color.bg, fg:color.fg});
   saveCats();
+  pushCloud();
   openCats();
   render();
 }
@@ -436,8 +477,12 @@ function removeCat(name){
     : `Delete the “${name}” category?`;
   if(!confirm(msg)) return;
   cats = cats.filter(c=>c.name!==name);
+  const key = name.toLowerCase();
+  if(!removedCatNames.includes(key)) removedCatNames.push(key);
   if(activeCat===name) activeCat='All';
   saveCats();
+  saveRemoved();
+  pushCloud();
   openCats();
   render();
 }
@@ -445,25 +490,48 @@ function removeCat(name){
 function openBackup(){
   const n = recipes.length;
   openSheet(`<div class="form">
-    <h2>Backup &amp; restore</h2>
-    <p class="backup-note">Save all ${n} recipe${n!==1?'s':''} and your categories to a file you can keep or move to another device. Importing adds the recipes from a backup file to this device.</p>
-    <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="exportData()">⬇ Export to file</button>
+    <h2>Backup &amp; sync</h2>
+    <p class="backup-note">You have ${n} recipe${n!==1?'s':''} saved. <b>Share</b> sends a <code>recipes.json</code> file to your computer — drop it into your GitHub repo and every future load will already include these recipes (no importing needed).</p>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="shareData()">📤 Share (send to computer)</button>
+    <button class="btn btn-ghost" style="width:100%;margin-bottom:10px" onclick="exportData()">⬇ Export a backup file</button>
     <button class="btn btn-ghost" style="width:100%" onclick="document.getElementById('import-file').click()">⬆ Import from file</button>
     <input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importData(event)">
   </div>`);
 }
 
+function dataPayload(){
+  return { app:'My Recipe Box', version:1, exportedAt:new Date().toISOString(), recipes, cats };
+}
+
+function downloadJSON(text, filename){
+  const blob = new Blob([text], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 150);
+}
+
+async function shareData(){
+  const text = JSON.stringify(dataPayload(), null, 2);
+  try{
+    const file = new File([text], 'recipes.json', {type:'application/json'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title:'My Recipe Box', text:'recipes.json for my Recipe Box app' });
+      return;
+    }
+  }catch(err){
+    if(err && err.name === 'AbortError') return; // user cancelled the share sheet
+  }
+  // Fallback when file-sharing isn't supported: download recipes.json instead
+  downloadJSON(text, 'recipes.json');
+}
+
 function exportData(){
   try{
-    const payload = { app:'My Recipe Box', version:1, exportedAt:new Date().toISOString(), recipes, cats };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `recipe-box-backup-${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 150);
+    downloadJSON(JSON.stringify(dataPayload(), null, 2), `recipe-box-backup-${new Date().toISOString().slice(0,10)}.json`);
   }catch(err){ alert('Sorry, the export could not be created.'); }
 }
 
@@ -502,7 +570,7 @@ function importData(e){
       if(idx>=0){ recipes[idx]=rec; updated++; } else { recipes.push(rec); added++; }
     });
 
-    save(); saveCats(); closeSheet(); render();
+    save(); saveCats(); pushCloud(); closeSheet(); render();
     const parts = [`${added} new recipe${added!==1?'s':''}`];
     if(updated) parts.push(`${updated} updated`);
     if(addedCats) parts.push(`${addedCats} categor${addedCats!==1?'ies':'y'}`);
@@ -703,16 +771,64 @@ function saveForm(){
   };
   if(editingId){ const i=recipes.findIndex(x=>x.id===editingId); if(i>=0) recipes[i]=data; }
   else recipes.push(data);
-  save(); closeSheet(); render();
+  save(); pushCloud(); closeSheet(); render();
 }
 
 function delRecipe(id){
   if(!confirm('Delete this recipe? This cannot be undone.')) return;
   recipes = recipes.filter(x=>x.id!==id);
-  save(); closeSheet(); render();
+  if(!removedRecipeIds.includes(id)) removedRecipeIds.push(id);
+  save(); saveRemoved(); pushCloud(); closeSheet(); render();
+}
+
+// Merge recipes/categories from the bundled recipes.json in the repo.
+// Anything already on the device, or anything the user has deleted
+// (tracked via tombstones), is left alone — so this only ADDS new items.
+function mergeBundledData(data){
+  if(!data || typeof data!=='object') return false;
+  let changed = false;
+
+  if(Array.isArray(data.cats)){
+    data.cats.forEach(c=>{
+      if(!c || !c.name) return;
+      const key = String(c.name).toLowerCase();
+      const exists = cats.some(x=>x.name.toLowerCase()===key);
+      if(!exists && !removedCatNames.includes(key)){
+        cats.push({ name:String(c.name), e:c.e||'🍴', bg:c.bg||'#e7eef5', fg:c.fg||'#3d566e' });
+        changed = true;
+      }
+    });
+  }
+
+  if(Array.isArray(data.recipes)){
+    data.recipes.forEach(r=>{
+      if(!r || !r.name || r.id===undefined || r.id===null) return;
+      const exists = recipes.some(x=>x.id===r.id);
+      if(!exists && !removedRecipeIds.includes(r.id)){
+        recipes.push({
+          id:r.id, name:String(r.name), cat:r.cat||'', time:r.time||'',
+          servings:r.servings||'', desc:r.desc||'',
+          ingredients:r.ingredients||'', steps:r.steps||''
+        });
+        changed = true;
+      }
+    });
+  }
+
+  if(changed){ save(); saveCats(); }
+  return changed;
+}
+
+function loadBundledData(){
+  // Cache-bust so a freshly committed recipes.json is picked up.
+  fetch('recipes.json?ts=' + Date.now(), {cache:'no-store'})
+    .then(res => res.ok ? res.json() : null)
+    .then(data => { if(mergeBundledData(data)){ pushCloud(); render(); } })
+    .catch(() => {});
 }
 
 render();
+loadBundledData();
 
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', e=>{
@@ -735,6 +851,65 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   });
+}
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import {
+  getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence
+} from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAoWbA-yOAWbnw0R8ZWGwLO9V3K_GsbLwg",
+  authDomain: "recipebox-ljs.firebaseapp.com",
+  projectId: "recipebox-ljs",
+  storageBucket: "recipebox-ljs.firebasestorage.app",
+  messagingSenderId: "504457472736",
+  appId: "1:504457472736:web:bfe0589cb1448a7755fe85",
+  measurementId: "G-JX88KXY4RQ"
+};
+
+try {
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  // Best-effort offline cache; ignored if a tab already holds it.
+  enableIndexedDbPersistence(db).catch(()=>{});
+
+  // One shared document holds the whole collection.
+  const ref = doc(db, "boxes", "shared");
+
+  // Push local state to the cloud (debounced a touch to batch quick edits).
+  let pushTimer = null;
+  window.cloudPush = (state) => {
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(() => {
+      setDoc(ref, { ...state, updatedAt: Date.now() })
+        .then(() => window.setSyncStatus && window.setSyncStatus('synced'))
+        .catch(() => window.setSyncStatus && window.setSyncStatus('offline'));
+    }, 400);
+  };
+
+  // Live updates from any device.
+  onSnapshot(ref, (snap) => {
+    window.setSyncStatus && window.setSyncStatus('synced');
+    if (snap.exists() && typeof window.applyCloud === 'function') {
+      window.applyCloud(snap.data());
+    } else if (!snap.exists()) {
+      // First run ever: seed the cloud doc from whatever this device has.
+      if (typeof window.cloudPush === 'function' && typeof window.currentStateBridge === 'function') {
+        window.cloudPush(window.currentStateBridge());
+      }
+    }
+  }, () => {
+    window.setSyncStatus && window.setSyncStatus('offline');
+  });
+
+  window.addEventListener('online',  () => window.setSyncStatus && window.setSyncStatus('connecting'));
+  window.addEventListener('offline', () => window.setSyncStatus && window.setSyncStatus('offline'));
+} catch (err) {
+  // If Firebase fails to load, the app still works fully offline/local.
+  window.setSyncStatus && window.setSyncStatus('offline');
 }
 </script>
 </body>

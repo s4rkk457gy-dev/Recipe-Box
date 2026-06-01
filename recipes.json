@@ -1,0 +1,13 @@
+{
+  "app": "My Recipe Box",
+  "version": 1,
+  "recipes": [],
+  "cats": [
+    { "name": "Breakfast", "e": "🥞", "bg": "#fde9d3", "fg": "#9c5a14" },
+    { "name": "Lunch", "e": "🥗", "bg": "#e2f0d9", "fg": "#3f6b1e" },
+    { "name": "Dinner", "e": "🍝", "bg": "#e7e3f7", "fg": "#4b3f8f" },
+    { "name": "Desserts", "e": "🍰", "bg": "#fbe2ea", "fg": "#9c3658" },
+    { "name": "Snacks", "e": "🥨", "bg": "#fdefd0", "fg": "#8a5e0e" },
+    { "name": "Drinks", "e": "🥤", "bg": "#dcecf8", "fg": "#1f5d8f" }
+  ]
+}
