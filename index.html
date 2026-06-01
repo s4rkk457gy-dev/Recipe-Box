@@ -491,7 +491,7 @@ function openBackup(){
   const n = recipes.length;
   openSheet(`<div class="form">
     <h2>Backup &amp; sync</h2>
-    <p class="backup-note">You have ${n} recipe${n!==1?'s':''} saved. <b>Share</b> sends a <code>recipes.json</code> file to your computer — drop it into your GitHub repo and every future load will already include these recipes (no importing needed).</p>
+    <p class="backup-note">You have ${n} recipe${n!==1?'s':''} saved.</p>
     <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="shareData()">📤 Share (send to computer)</button>
     <button class="btn btn-ghost" style="width:100%;margin-bottom:10px" onclick="exportData()">⬇ Export a backup file</button>
     <button class="btn btn-ghost" style="width:100%" onclick="document.getElementById('import-file').click()">⬆ Import from file</button>
