@@ -230,7 +230,7 @@ header{
     <div class="header-top">
       <div class="brand">
         <div>
-          <h1>Recipe Box</h1>
+          <h1>LJ's Recipe Box</h1>
         </div>
       </div>
       <button class="menu-btn" onclick="openBackup()" aria-label="Backup and restore"><span class="sync-dot" id="sync-dot" data-state="connecting"></span>⤓</button>
@@ -604,46 +604,78 @@ function viewRecipe(id){
 
 function printRecipe(id){
   const r = recipes.find(x=>x.id===id); if(!r) return;
+  const s = st(r.cat);
   const ings = (r.ingredients||'').split('\n').map(x=>x.trim()).filter(Boolean)
     .map(x=>`<li>${esc(cardIngredient(x))}</li>`).join('');
   const steps = (r.steps||'').split('\n').map(x=>x.trim().replace(/^\d+[\.\)]\s*/,'')).filter(Boolean)
-    .map(x=>`<li>${esc(x)}</li>`).join('');
-  const metaBits = [r.cat, r.time, r.servings?`${esc(r.servings)} servings`:''].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ');
+    .map(x=>`<li><span class="num"></span><span>${esc(x)}</span></li>`).join('');
+  const metaBits = [r.time?`⏱ ${esc(r.time)}`:'', r.servings?`🍽 ${esc(r.servings)} servings`:'']
+    .filter(Boolean).join('<span class="dot-sep">•</span>');
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(r.name)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Albert+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  *{box-sizing:border-box}
-  body{font-family:Georgia,'Times New Roman',serif;color:#2b2b2b;max-width:680px;margin:0 auto;padding:40px 32px;line-height:1.5}
-  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
-  .meta{color:#666;font-size:14px;margin-bottom:20px}
-  .desc{font-style:italic;color:#555;margin:0 0 24px;font-size:15px}
-  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#b06a2c;border-bottom:1px solid #e5e0d8;padding-bottom:6px;margin:26px 0 12px}
-  ul,ol{margin:0;padding-left:22px}
-  li{margin:6px 0;font-size:15px}
-  ol li{padding-left:6px}
-  .foot{margin-top:36px;padding-top:14px;border-top:1px solid #e5e0d8;color:#999;font-size:12px;text-align:center;font-family:Arial,sans-serif}
-  @media print{ body{padding:0} .noprint{display:none} }
-  .noprint{position:fixed;top:16px;right:16px;display:flex;gap:8px}
-  .noprint button{font-family:Arial,sans-serif;font-size:14px;font-weight:600;border:none;border-radius:10px;padding:10px 16px;cursor:pointer}
-  .pbtn{background:#5e9bd1;color:#fff}
-  .cbtn{background:#eee;color:#333}
+  :root{ --cream:#f7f0e4; --card:#fffdf8; --blue:#5e9bd1; --blue-dark:#4480ba; --ink:#33291f; --soft:#6f6354; --line:rgba(51,41,31,.1); }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--card);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-family:'Albert Sans',system-ui,sans-serif;color:var(--ink);padding:0}
+  .card{max-width:640px;margin:0 auto;background:var(--card);border-radius:0;overflow:hidden}
+  .hero{background:var(--blue);color:var(--cream);padding:28px 30px 24px}
+  .hero .tag{display:inline-flex;align-items:center;gap:7px;background:${s.bg};color:${s.fg};font-size:12.5px;font-weight:600;padding:4px 12px;border-radius:14px;margin-bottom:12px}
+  .hero h1{font-family:'Fraunces',serif;font-weight:600;font-size:32px;line-height:1.12;letter-spacing:-.01em}
+  .hero .meta{margin-top:10px;font-size:14px;opacity:.92;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .dot-sep{opacity:.6;margin:0 4px}
+  .body{padding:24px 30px 30px}
+  .desc{font-style:italic;color:var(--soft);font-size:15px;line-height:1.6;margin-bottom:22px}
+  h2{font-family:'Fraunces',serif;font-size:17px;font-weight:600;color:var(--blue-dark);margin:22px 0 12px;display:flex;align-items:center;gap:8px}
+  h2:first-of-type{margin-top:0}
+  .ings{list-style:none}
+  .ings li{position:relative;padding:7px 0 7px 20px;font-size:15px;border-bottom:1px solid var(--line);line-height:1.4}
+  .ings li:before{content:'';position:absolute;left:2px;top:14px;width:6px;height:6px;border-radius:50%;background:var(--blue)}
+  .steps{list-style:none;counter-reset:step}
+  .steps li{counter-increment:step;display:flex;gap:12px;padding:8px 0;font-size:15px;line-height:1.5}
+  .steps li .num{flex:0 0 auto;width:25px;height:25px;border-radius:50%;background:var(--blue);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .steps li .num:before{content:counter(step)}
+  .foot{text-align:center;color:var(--soft);opacity:.7;font-size:12px;margin-top:26px;letter-spacing:.03em}
+  .noprint{position:fixed;top:14px;right:14px;display:flex;gap:8px;z-index:10}
+  .noprint button{font-family:'Albert Sans',sans-serif;font-size:14px;font-weight:600;border:none;border-radius:11px;padding:11px 16px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.15)}
+  .pbtn{background:var(--blue);color:#fff}
+  .cbtn{background:#fff;color:var(--ink)}
+  @media print{
+    html,body{background:var(--card)}
+    .card{max-width:none}
+    .noprint{display:none}
+  }
 </style></head>
 <body>
   <div class="noprint">
     <button class="cbtn" onclick="window.close()">Close</button>
     <button class="pbtn" onclick="window.print()">Save / Share PDF</button>
   </div>
-  <h1>${esc(r.name)}</h1>
-  ${metaBits?`<div class="meta">${metaBits}</div>`:''}
-  ${r.desc?`<div class="desc">${esc(r.desc)}</div>`:''}
-  ${ings?`<h2>Ingredients</h2><ul>${ings}</ul>`:''}
-  ${steps?`<h2>Directions</h2><ol>${steps}</ol>`:''}
-  <div class="foot">Recipe Box</div>
+  <div class="card">
+    <div class="hero">
+      ${r.cat?`<div class="tag">${s.e} ${esc(r.cat)}</div>`:''}
+      <h1>${esc(r.name)}</h1>
+      ${metaBits?`<div class="meta">${metaBits}</div>`:''}
+    </div>
+    <div class="body">
+      ${r.desc?`<div class="desc">“${esc(r.desc)}”</div>`:''}
+      ${ings?`<h2>🧂 Ingredients</h2><ul class="ings">${ings}</ul>`:''}
+      ${steps?`<h2>👩‍🍳 Directions</h2><ol class="steps">${steps}</ol>`:''}
+      <div class="foot">LJ's Recipe Box</div>
+    </div>
+  </div>
   <script>
-    // Give the layout a beat to render, then open the print/share dialog.
-    window.addEventListener('load', function(){ setTimeout(function(){ try{ window.print(); }catch(e){} }, 350); });
+    // Wait for fonts/layout, then open the print/share dialog.
+    function go(){ try{ window.print(); }catch(e){} }
+    window.addEventListener('load', function(){
+      if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ setTimeout(go,250); }); }
+      else { setTimeout(go,500); }
+    });
   <\/script>
 </body></html>`;
 
