@@ -54,6 +54,16 @@ header{
 }
 .brand h1{font-family:'Fraunces',serif;font-weight:500;font-size:23px;letter-spacing:-.01em}
 .brand .sub{font-size:12.5px;opacity:.82;margin-top:1px}
+.header-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.menu-btn{
+  flex:0 0 auto;width:38px;height:38px;border-radius:11px;
+  border:none;background:rgba(247,240,228,.18);color:var(--cream);
+  font-size:19px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .15s,transform .1s;
+}
+.menu-btn:hover{background:rgba(247,240,228,.28)}
+.menu-btn:active{transform:scale(.93)}
+.backup-note{font-size:14px;line-height:1.55;color:var(--ink-soft);margin-bottom:18px}
 .search{margin-top:16px;position:relative;}
 .search input{
   width:100%;border:none;border-radius:13px;
@@ -64,7 +74,7 @@ header{
 .search input:focus{outline:none;box-shadow:0 0 0 3px rgba(247,240,228,.4)}
 .search .ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.5;font-size:17px}
 
-.chips{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding:16px 20px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding:16px 20px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-padding:0 20px}
 .chips::-webkit-scrollbar{display:none}
 .chip{
   flex:0 0 auto;border:1px solid var(--line);background:var(--cream-card);
@@ -212,11 +222,14 @@ header{
 <body>
 <div class="app">
   <header>
-    <div class="brand">
-      <div>
-        <h1>My Recipe Box</h1>
-        <div class="sub" id="sub">Your personal cookbook</div>
+    <div class="header-top">
+      <div class="brand">
+        <div>
+          <h1>My Recipe Box</h1>
+          <div class="sub" id="sub">Your personal cookbook</div>
+        </div>
       </div>
+      <button class="menu-btn" onclick="openBackup()" aria-label="Backup and restore">⤓</button>
     </div>
     <div class="search">
       <span class="ico">🔍</span>
@@ -336,10 +349,25 @@ function render(){
       <span class="chev">›</span>
     </div>`;
   }).join('');
+  updateChipFades();
+}
+
+function updateChipFades(){
+  const el = document.getElementById('chips');
+  if(!el) return;
+  const atStart = el.scrollLeft <= 1;
+  const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
+  const left = atStart ? '#000 0' : 'transparent 0, #000 22px';
+  const right = atEnd ? '#000 100%' : '#000 calc(100% - 22px), transparent 100%';
+  const mask = `linear-gradient(to right, ${left}, ${right})`;
+  el.style.webkitMaskImage = mask;
+  el.style.maskImage = mask;
 }
 
 function setCat(c){ activeCat=c; render(); }
 document.getElementById('search').addEventListener('input', render);
+document.getElementById('chips').addEventListener('scroll', updateChipFades, {passive:true});
+window.addEventListener('resize', updateChipFades);
 
 function openSheet(html){
   document.getElementById('sheetInner').innerHTML = html;
@@ -412,6 +440,76 @@ function removeCat(name){
   saveCats();
   openCats();
   render();
+}
+
+function openBackup(){
+  const n = recipes.length;
+  openSheet(`<div class="form">
+    <h2>Backup &amp; restore</h2>
+    <p class="backup-note">Save all ${n} recipe${n!==1?'s':''} and your categories to a file you can keep or move to another device. Importing adds the recipes from a backup file to this device.</p>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="exportData()">⬇ Export to file</button>
+    <button class="btn btn-ghost" style="width:100%" onclick="document.getElementById('import-file').click()">⬆ Import from file</button>
+    <input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importData(event)">
+  </div>`);
+}
+
+function exportData(){
+  try{
+    const payload = { app:'My Recipe Box', version:1, exportedAt:new Date().toISOString(), recipes, cats };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `recipe-box-backup-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 150);
+  }catch(err){ alert('Sorry, the export could not be created.'); }
+}
+
+function importData(e){
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let data;
+    try { data = JSON.parse(reader.result); }
+    catch(err){ alert('That file could not be read. Please choose a Recipe Box backup file.'); return; }
+    const inRec = Array.isArray(data && data.recipes) ? data.recipes : null;
+    if(!inRec){ alert('This doesn’t look like a Recipe Box backup file.'); return; }
+
+    let addedCats = 0;
+    if(Array.isArray(data.cats)){
+      data.cats.forEach(c=>{
+        if(c && c.name && !cats.some(x=>x.name.toLowerCase()===String(c.name).toLowerCase())){
+          cats.push({name:String(c.name), e:c.e||'🍴', bg:c.bg||'#e7eef5', fg:c.fg||'#3d566e'});
+          addedCats++;
+        }
+      });
+    }
+
+    let added = 0, updated = 0;
+    inRec.forEach(r=>{
+      if(!r || !r.name) return;
+      const id = r.id || (Date.now() + Math.floor(Math.random()*100000));
+      const rec = {
+        id, name:String(r.name), cat:r.cat||'', time:r.time||'',
+        servings:r.servings||'', desc:r.desc||'',
+        ingredients:r.ingredients||'', steps:r.steps||''
+      };
+      const idx = recipes.findIndex(x=>x.id===id);
+      if(idx>=0){ recipes[idx]=rec; updated++; } else { recipes.push(rec); added++; }
+    });
+
+    save(); saveCats(); closeSheet(); render();
+    const parts = [`${added} new recipe${added!==1?'s':''}`];
+    if(updated) parts.push(`${updated} updated`);
+    if(addedCats) parts.push(`${addedCats} categor${addedCats!==1?'ies':'y'}`);
+    alert('Imported ' + parts.join(', ') + '.');
+  };
+  reader.onerror = () => alert('The file could not be read. Please try again.');
+  reader.readAsText(file);
 }
 
 
