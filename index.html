@@ -46,15 +46,18 @@ header{
   border-radius:0 0 22px 22px;
   box-shadow:0 4px 20px rgba(68,128,186,.25);
 }
-.brand{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto}
+.brand>div{min-width:0}
 .brand-mark{
   width:34px;height:34px;border-radius:10px;
   background:rgba(247,240,228,.16);
   display:flex;align-items:center;justify-content:center;font-size:18px;
 }
-.brand h1{font-family:'Fraunces',serif;font-weight:500;font-size:23px;letter-spacing:-.01em}
+.brand h1{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:-.01em;white-space:nowrap;line-height:1.35;padding-bottom:1px;overflow:visible}
 .brand .sub{font-size:12.5px;opacity:.82;margin-top:1px}
-.header-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.header-top{display:grid;grid-template-columns:38px 1fr 38px;align-items:center;gap:10px}
+.hspacer{width:38px}
+.brand{justify-content:center;text-align:center;overflow:visible}
 .menu-btn{
   flex:0 0 auto;width:38px;height:38px;border-radius:11px;
   border:none;background:rgba(247,240,228,.18);color:var(--cream);
@@ -228,9 +231,10 @@ header{
 <div class="app">
   <header>
     <div class="header-top">
+      <div class="hspacer"></div>
       <div class="brand">
         <div>
-          <h1>LJ's Recipe Box</h1>
+          <h1>LJ’s Recipe Box</h1>
         </div>
       </div>
       <button class="menu-btn" onclick="openBackup()" aria-label="Backup and restore"><span class="sync-dot" id="sync-dot" data-state="connecting"></span>⤓</button>
@@ -666,7 +670,7 @@ function printRecipe(id){
       ${r.desc?`<div class="desc">“${esc(r.desc)}”</div>`:''}
       ${ings?`<h2>🧂 Ingredients</h2><ul class="ings">${ings}</ul>`:''}
       ${steps?`<h2>👩‍🍳 Directions</h2><ol class="steps">${steps}</ol>`:''}
-      <div class="foot">LJ's Recipe Box</div>
+      <div class="foot">LJ’s Recipe Box</div>
     </div>
   </div>
   <script>
