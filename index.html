@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Recipes">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>My Recipe Box</title>
+<title>Recipe Box</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Albert+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -230,8 +230,7 @@ header{
     <div class="header-top">
       <div class="brand">
         <div>
-          <h1>My Recipe Box</h1>
-          <div class="sub" id="sub">Your personal cookbook</div>
+          <h1>Recipe Box</h1>
         </div>
       </div>
       <button class="menu-btn" onclick="openBackup()" aria-label="Backup and restore"><span class="sync-dot" id="sync-dot" data-state="connecting"></span>⤓</button>
@@ -354,7 +353,6 @@ function st(name){ return cats.find(c=>c.name===name) || NEUTRAL; }
 
 function render(){
   const q = document.getElementById('search').value.toLowerCase().trim();
-  document.getElementById('sub').textContent = recipes.length + ' recipe' + (recipes.length!==1?'s':'') + ' saved';
 
   if(activeCat!=='All' && !catNames().includes(activeCat)) activeCat='All';
 
