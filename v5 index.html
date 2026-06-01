@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#5e9bd1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Recipes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Recipe Box</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Albert+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#f7f0e4;
+  --cream-card:#fffdf8;
+  --terra:#5e9bd1;
+  --terra-dark:#4480ba;
+  --ink:#33291f;
+  --ink-soft:#6f6354;
+  --line:rgba(51,41,31,.12);
+  --line-soft:rgba(51,41,31,.07);
+  --shadow:0 2px 14px rgba(51,41,31,.07);
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:'Albert Sans',system-ui,sans-serif;
+  background:var(--cream);
+  color:var(--ink);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+header{
+  position:sticky;top:0;z-index:20;
+  background:var(--terra);
+  color:var(--cream);
+  padding:calc(var(--safe-top) + 18px) 20px 16px;
+  border-radius:0 0 22px 22px;
+  box-shadow:0 4px 20px rgba(68,128,186,.25);
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{
+  width:34px;height:34px;border-radius:10px;
+  background:rgba(247,240,228,.16);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.brand h1{font-family:'Fraunces',serif;font-weight:500;font-size:23px;letter-spacing:-.01em}
+.brand .sub{font-size:12.5px;opacity:.82;margin-top:1px}
+.header-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.menu-btn{
+  flex:0 0 auto;width:38px;height:38px;border-radius:11px;
+  border:none;background:rgba(247,240,228,.18);color:var(--cream);
+  font-size:19px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .15s,transform .1s;
+}
+.menu-btn:hover{background:rgba(247,240,228,.28)}
+.menu-btn:active{transform:scale(.93)}
+.menu-btn{position:relative}
+.sync-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#d9b14a;box-shadow:0 0 0 2px var(--terra)}
+.sync-dot[data-state="synced"]{background:#5fbf7e}
+.sync-dot[data-state="connecting"]{background:#d9b14a}
+.sync-dot[data-state="offline"]{background:#cf6a5a}
+.backup-note{font-size:14px;line-height:1.55;color:var(--ink-soft);margin-bottom:18px}
+.search{margin-top:16px;position:relative;}
+.search input{
+  width:100%;border:none;border-radius:13px;
+  background:rgba(247,240,228,.95);
+  padding:12px 14px 12px 42px;font-size:15px;font-family:inherit;color:var(--ink);
+}
+.search input::placeholder{color:var(--ink-soft)}
+.search input:focus{outline:none;box-shadow:0 0 0 3px rgba(247,240,228,.4)}
+.search .ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.5;font-size:17px}
+
+.chips{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding:16px 20px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-padding:0 20px}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:0 0 auto;border:1px solid var(--line);background:var(--cream-card);
+  border-radius:20px;padding:7px 15px;font-size:13.5px;font-weight:500;color:var(--ink-soft);
+  cursor:pointer;transition:all .18s;white-space:nowrap;
+}
+.chip.active{background:var(--ink);color:var(--cream);border-color:var(--ink)}
+.chip-add{display:inline-flex;align-items:center;gap:5px;border-style:dashed;border-color:var(--terra);color:var(--terra);font-weight:600}
+.chip-add span{font-size:15px;line-height:1}
+
+.cat-manage-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.cat-manage-row{display:flex;align-items:center;gap:11px;background:var(--cream-card);border:1px solid var(--line-soft);border-radius:13px;padding:9px 11px}
+.cat-chip-tag{flex:0 0 auto;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.cat-manage-name{flex:1;font-size:15px;font-weight:500;color:var(--ink)}
+.cat-manage-count{font-size:12px;color:var(--ink-soft)}
+.cat-add-box{background:var(--cream-card);border:1px solid var(--line-soft);border-radius:14px;padding:14px}
+.emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px}
+.emoji-opt{border:1px solid var(--line);background:var(--cream);border-radius:10px;height:40px;font-size:19px;cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center}
+.emoji-opt.sel{border-color:var(--terra);background:rgba(94,155,209,.14);transform:scale(1.05)}
+
+.list{flex:1;padding:8px 20px 110px;display:flex;flex-direction:column;gap:12px}
+.card{
+  background:var(--cream-card);border:1px solid var(--line-soft);
+  border-radius:16px;padding:15px 16px;box-shadow:var(--shadow);
+  cursor:pointer;transition:transform .12s, box-shadow .18s;
+  display:flex;align-items:center;gap:14px;
+  animation:rise .35s ease both;
+}
+.card:active{transform:scale(.98)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card-tag{
+  flex:0 0 auto;width:46px;height:46px;border-radius:13px;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.card-body{flex:1;min-width:0}
+.card-body h3{font-family:'Fraunces',serif;font-weight:500;font-size:17px;line-height:1.2;margin-bottom:3px}
+.card-meta{display:flex;gap:12px;font-size:12.5px;color:var(--ink-soft)}
+.card-meta span{display:flex;align-items:center;gap:4px}
+.cat-pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:10px;margin-bottom:5px}
+.chev{opacity:.3;font-size:18px}
+
+.empty{text-align:center;padding:60px 30px;color:var(--ink-soft)}
+.empty .big{font-size:48px;margin-bottom:12px;opacity:.5}
+.empty h3{font-family:'Fraunces',serif;font-weight:500;font-size:19px;color:var(--ink);margin-bottom:6px}
+.empty p{font-size:14px;line-height:1.5}
+
+.fab{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(var(--safe-bottom) + 22px);z-index:30;
+  background:var(--terra);color:var(--cream);border:none;
+  height:54px;padding:0 26px;border-radius:27px;
+  font-family:inherit;font-size:15.5px;font-weight:600;
+  display:flex;align-items:center;gap:8px;cursor:pointer;
+  box-shadow:0 6px 22px rgba(68,128,186,.4);transition:transform .12s;
+}
+.fab:active{transform:translateX(-50%) scale(.95)}
+.fab .plus{font-size:22px;line-height:1;margin-top:-2px}
+
+.scrim{position:fixed;inset:0;background:rgba(51,41,31,.5);z-index:40;opacity:0;pointer-events:none;transition:opacity .22s}
+.scrim.show{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:50%;top:50%;z-index:50;
+  width:calc(100% - 36px);max-width:460px;
+  background:var(--cream);border-radius:20px;
+  max-height:88vh;overflow:hidden;
+  display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;
+  transform:translate(-50%,-50%) scale(.94);
+  transition:opacity .22s ease, transform .26s cubic-bezier(.32,.72,0,1);
+  box-shadow:0 20px 56px rgba(51,41,31,.32);
+  -webkit-overflow-scrolling:touch;
+}
+.sheet.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.sheet-close{
+  position:absolute;top:12px;left:12px;z-index:3;
+  width:32px;height:32px;border-radius:50%;
+  border:1px solid var(--line);background:var(--cream-card);
+  color:var(--ink-soft);font-size:15px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .15s,transform .1s;
+}
+.sheet-close:hover{background:var(--cream)}
+.sheet-close:active{transform:scale(.92)}
+.sheet-inner{padding:52px 22px 22px;overflow-y:auto;flex:1 1 auto;min-height:0}
+
+.view-tag{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:14px}
+.view h2{font-family:'Fraunces',serif;font-weight:600;font-size:26px;line-height:1.15;margin-bottom:8px}
+.view .meta{display:flex;gap:16px;flex-wrap:wrap;font-size:13.5px;color:var(--ink-soft);margin-bottom:16px}
+.view .meta span{display:flex;align-items:center;gap:5px}
+.view .desc{font-size:15px;line-height:1.6;color:var(--ink-soft);margin-bottom:20px;font-style:italic}
+.sec-label{font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:var(--terra);margin:18px 0 10px;display:flex;align-items:center;gap:7px}
+.ing-item{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-soft);font-size:14.5px;line-height:1.4}
+.ing-item .dot{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--terra);margin-top:8px}
+.step-item{display:flex;gap:12px;padding:9px 0;font-size:14.5px;line-height:1.5}
+.step-num{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--terra);color:var(--cream);font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.view-actions{display:flex;gap:10px;margin-top:26px}
+
+.form h2{font-family:'Fraunces',serif;font-weight:600;font-size:21px;margin:6px 0 18px}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:6px}
+.field input,.field select,.field textarea{
+  width:100%;border:1px solid var(--line);border-radius:12px;
+  background:var(--cream-card);padding:11px 13px;font-size:15px;font-family:inherit;color:var(--ink);
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--terra);box-shadow:0 0 0 3px rgba(94,155,209,.13)}
+.field textarea{resize:vertical;min-height:78px;line-height:1.5}
+.field .hint{font-size:11.5px;color:var(--ink-soft);margin-top:4px;opacity:.8}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.line-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.line-row{display:flex;align-items:center;gap:8px;animation:rise .2s ease both}
+.line-bullet{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600}
+.line-bullet.dot-style{background:transparent;border:none}
+.line-bullet.dot-style::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--terra)}
+.line-bullet.num-style{background:var(--terra);color:var(--cream)}
+.line-row input{flex:1;border:1px solid var(--line);border-radius:11px;background:var(--cream-card);padding:10px 12px;font-size:14.5px;font-family:inherit;color:var(--ink)}
+.line-row input:focus{outline:none;border-color:var(--terra);box-shadow:0 0 0 3px rgba(94,155,209,.13)}
+.ing-row{flex-wrap:wrap;gap:6px}
+.ing-row .ing-amt{flex:0 0 54px;width:54px;text-align:center;padding-left:4px;padding-right:4px}
+.ing-row .ing-name{flex:1 1 130px;min-width:130px;width:auto}
+.ing-row .ing-unit{flex:0 0 108px;width:108px;border:1px solid var(--line);border-radius:11px;background:var(--cream-card);padding:10px 8px;font-size:14px;font-family:inherit;color:var(--ink);height:auto}
+.ing-row .ing-unit:focus{outline:none;border-color:var(--terra);box-shadow:0 0 0 3px rgba(94,155,209,.13)}
+.line-del{flex:0 0 auto;width:30px;height:30px;border:none;background:transparent;color:var(--ink-soft);font-size:17px;cursor:pointer;border-radius:8px;opacity:.55;transition:opacity .15s}
+.line-del:active{opacity:1}
+.add-line{display:flex;align-items:center;gap:8px;border:1px dashed var(--line);background:transparent;border-radius:11px;padding:10px 12px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--terra);cursor:pointer;width:100%;transition:background .15s}
+.add-line:active{background:rgba(94,155,209,.06)}
+.add-line .ap{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--terra);color:var(--cream);font-size:15px;line-height:1}
+
+.btn{border:none;border-radius:13px;font-family:inherit;font-size:15px;font-weight:600;padding:13px;cursor:pointer;transition:transform .1s;flex:1;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--terra);color:var(--cream)}
+.btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line)}
+.btn-danger{background:transparent;color:#b3392a;border:1px solid rgba(179,57,42,.35);flex:0 0 auto;padding:13px 18px}
+
+.install{
+  margin:0 20px 8px;background:var(--ink);color:var(--cream);
+  border-radius:14px;padding:12px 14px;display:none;align-items:center;gap:12px;font-size:13.5px;
+  animation:rise .4s both;
+}
+.install.show{display:flex}
+.install .txt{flex:1;line-height:1.35}
+.install button{background:var(--cream);color:var(--ink);border:none;border-radius:9px;padding:8px 14px;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer}
+.install .x{background:transparent;color:var(--cream);opacity:.7;padding:6px;font-size:16px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-top">
+      <div class="brand">
+        <div>
+          <h1>Recipe Box</h1>
+        </div>
+      </div>
+      <button class="menu-btn" onclick="openBackup()" aria-label="Backup and restore"><span class="sync-dot" id="sync-dot" data-state="connecting"></span>⤓</button>
+    </div>
+    <div class="search">
+      <span class="ico">🔍</span>
+      <input type="search" id="search" placeholder="Search recipes or ingredients…" autocomplete="off">
+    </div>
+  </header>
+
+  <div class="install" id="install">
+    <div class="txt">Install Recipe Box to your home screen for quick offline access.</div>
+    <button id="installBtn">Install</button>
+    <button class="x" id="installX">✕</button>
+  </div>
+
+  <div class="chips" id="chips"></div>
+  <div class="list" id="list"></div>
+
+  <button class="fab" onclick="openForm()"><span class="plus">+</span> Add recipe</button>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"><button class="sheet-close" aria-label="Close" onclick="closeSheet()">✕</button><div class="sheet-inner" id="sheetInner"></div></div>
+
+<script>
+const DEFAULT_CATS = [
+  {name:'Breakfast', e:'🥞', bg:'#fde9d3', fg:'#9c5a14'},
+  {name:'Lunch',     e:'🥗', bg:'#e2f0d9', fg:'#3f6b1e'},
+  {name:'Dinner',    e:'🍝', bg:'#e7e3f7', fg:'#4b3f8f'},
+  {name:'Desserts',  e:'🍰', bg:'#fbe2ea', fg:'#9c3658'},
+  {name:'Snacks',    e:'🥨', bg:'#fdefd0', fg:'#8a5e0e'},
+  {name:'Drinks',    e:'🥤', bg:'#dcecf8', fg:'#1f5d8f'}
+];
+const NEUTRAL = {e:'🍴', bg:'#e7eef5', fg:'#3d566e'};
+const PALETTE = [
+  {bg:'#dcecf8'.replace('dcecf8','dcecf8'), fg:'#1f5d8f'},
+  {bg:'#e2f0d9', fg:'#3f6b1e'},
+  {bg:'#fbe2ea', fg:'#9c3658'},
+  {bg:'#fdefd0', fg:'#8a5e0e'},
+  {bg:'#e7e3f7', fg:'#4b3f8f'},
+  {bg:'#fde9d3', fg:'#9c5a14'},
+  {bg:'#d8efe8', fg:'#1d7a5e'}
+];
+const EMOJI_CHOICES = ['🍴','🍲','🥘','🍱','🥗','🍰','🥞','🍝','🥤','🥨','🌮','🍜','🍞','🧀','🍳','🥪','🍕','🍣','🥕','🍓'];
+const UNITS = ['Cups','Tablespoon','Teaspoon','Grams','Ounces'];
+const UNIT_ALIASES = {
+  'cup':'Cups','cups':'Cups','c':'Cups',
+  'tablespoon':'Tablespoon','tablespoons':'Tablespoon','tbsp':'Tablespoon','tbs':'Tablespoon','tbl':'Tablespoon',
+  'teaspoon':'Teaspoon','teaspoons':'Teaspoon','tsp':'Teaspoon',
+  'gram':'Grams','grams':'Grams','g':'Grams',
+  'ounce':'Ounces','ounces':'Ounces','oz':'Ounces'
+};
+// Units shown abbreviated on the recipe card
+const UNIT_ABBR = { 'Tablespoon':'tbsp', 'Teaspoon':'tsp', 'Grams':'g', 'Ounces':'oz' };
+
+let recipes = [];
+let cats = [];
+let removedRecipeIds = [];
+let removedCatNames = [];
+let activeCat = 'All';
+let editingId = null;
+let pickedEmoji = '🍴';
+
+try { recipes = JSON.parse(localStorage.getItem('recipebox')||'[]'); } catch(e){ recipes = []; }
+try { cats = JSON.parse(localStorage.getItem('recipebox_cats')||'null'); } catch(e){ cats = null; }
+try { removedRecipeIds = JSON.parse(localStorage.getItem('recipebox_removed')||'[]'); } catch(e){ removedRecipeIds = []; }
+try { removedCatNames = JSON.parse(localStorage.getItem('recipebox_removed_cats')||'[]'); } catch(e){ removedCatNames = []; }
+if(!Array.isArray(cats) || !cats.length){ cats = DEFAULT_CATS.map(c=>({...c})); }
+
+function save(){ try{ localStorage.setItem('recipebox', JSON.stringify(recipes)); }catch(e){} }
+function saveCats(){ try{ localStorage.setItem('recipebox_cats', JSON.stringify(cats)); }catch(e){} }
+function saveRemoved(){
+  try{
+    localStorage.setItem('recipebox_removed', JSON.stringify(removedRecipeIds));
+    localStorage.setItem('recipebox_removed_cats', JSON.stringify(removedCatNames));
+  }catch(e){}
+}
+
+// ---- Cloud sync hooks (wired up by the Firebase module below) ----
+// window.cloudPush(state) is set once Firebase is ready; until then writes
+// just stay local and get pushed when the connection comes up.
+let lastCloudJSON = '';
+function currentState(){
+  return { recipes, cats, removedRecipeIds, removedCatNames };
+}
+function pushCloud(){
+  try{
+    const json = JSON.stringify(currentState());
+    lastCloudJSON = json;
+    if(typeof window.cloudPush === 'function') window.cloudPush(currentState());
+  }catch(e){}
+}
+// Called by the Firebase listener when remote data arrives.
+function applyCloud(data){
+  if(!data || typeof data !== 'object') return;
+  const json = JSON.stringify({
+    recipes: data.recipes||[], cats: data.cats||[],
+    removedRecipeIds: data.removedRecipeIds||[], removedCatNames: data.removedCatNames||[]
+  });
+  if(json === lastCloudJSON) return; // it's our own write echoing back — ignore
+  lastCloudJSON = json;
+  if(Array.isArray(data.recipes)) recipes = data.recipes;
+  if(Array.isArray(data.cats) && data.cats.length) cats = data.cats;
+  if(Array.isArray(data.removedRecipeIds)) removedRecipeIds = data.removedRecipeIds;
+  if(Array.isArray(data.removedCatNames)) removedCatNames = data.removedCatNames;
+  save(); saveCats(); saveRemoved();
+  render();
+}
+window.applyCloud = applyCloud;
+window.currentStateBridge = currentState;
+function setSyncStatus(state){
+  const el = document.getElementById('sync-dot');
+  if(el) el.dataset.state = state;
+}
+window.setSyncStatus = setSyncStatus;
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function catNames(){ return cats.map(c=>c.name); }
+function st(name){ return cats.find(c=>c.name===name) || NEUTRAL; }
+
+function render(){
+  const q = document.getElementById('search').value.toLowerCase().trim();
+
+  if(activeCat!=='All' && !catNames().includes(activeCat)) activeCat='All';
+
+  const chips = document.getElementById('chips');
+  const all = ['All',...catNames()];
+  chips.innerHTML = `<button class="chip chip-add" onclick="openCats()" aria-label="Add category"><span>＋</span> Category</button>`
+    + all.map(c=>`<button class="chip${activeCat===c?' active':''}" onclick="setCat('${esc(c).replace(/'/g,"\\'")}')">${esc(c)}</button>`).join('');
+
+  let list = recipes.filter(r=>{
+    const mc = activeCat==='All'||r.cat===activeCat;
+    const mq = !q || r.name.toLowerCase().includes(q) || (r.ingredients||'').toLowerCase().includes(q) || (r.desc||'').toLowerCase().includes(q);
+    return mc && mq;
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+
+  const el = document.getElementById('list');
+  if(!list.length){
+    el.innerHTML = `<div class="empty"><div class="big">🍲</div><h3>${q||activeCat!=='All'?'Nothing here yet':'Your recipe box is empty'}</h3><p>${q||activeCat!=='All'?'Try a different search or category.':'Tap “Add recipe” to save your first one.'}</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map((r,i)=>{
+    const s = st(r.cat);
+    return `<div class="card" style="animation-delay:${i*0.03}s" onclick="viewRecipe(${r.id})">
+      <div class="card-tag" style="background:${s.bg}">${s.e}</div>
+      <div class="card-body">
+        <span class="cat-pill" style="background:${s.bg};color:${s.fg}">${r.cat}</span>
+        <h3>${esc(r.name)}</h3>
+        <div class="card-meta">
+          ${r.time?`<span>⏱ ${esc(r.time)}</span>`:''}
+          ${r.servings?`<span>🍽 ${esc(r.servings)}</span>`:''}
+        </div>
+      </div>
+      <span class="chev">›</span>
+    </div>`;
+  }).join('');
+  updateChipFades();
+}
+
+function updateChipFades(){
+  const el = document.getElementById('chips');
+  if(!el) return;
+  const atStart = el.scrollLeft <= 1;
+  const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
+  const left = atStart ? '#000 0' : 'transparent 0, #000 22px';
+  const right = atEnd ? '#000 100%' : '#000 calc(100% - 22px), transparent 100%';
+  const mask = `linear-gradient(to right, ${left}, ${right})`;
+  el.style.webkitMaskImage = mask;
+  el.style.maskImage = mask;
+}
+
+function setCat(c){ activeCat=c; render(); }
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('chips').addEventListener('scroll', updateChipFades, {passive:true});
+window.addEventListener('resize', updateChipFades);
+
+function openSheet(html){
+  document.getElementById('sheetInner').innerHTML = html;
+  document.getElementById('scrim').classList.add('show');
+  document.getElementById('sheet').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function closeSheet(){
+  document.getElementById('scrim').classList.remove('show');
+  document.getElementById('sheet').classList.remove('show');
+  document.body.style.overflow='';
+}
+
+function openCats(){
+  pickedEmoji = '🍴';
+  const rows = cats.map(c=>{
+    const count = recipes.filter(r=>r.cat===c.name).length;
+    return `<div class="cat-manage-row">
+      <span class="cat-chip-tag" style="background:${c.bg};color:${c.fg}">${c.e}</span>
+      <span class="cat-manage-name">${esc(c.name)}</span>
+      <span class="cat-manage-count">${count} recipe${count!==1?'s':''}</span>
+      <button class="line-del" aria-label="Remove ${esc(c.name)}" onclick="removeCat('${esc(c.name).replace(/'/g,"\\'")}')">✕</button>
+    </div>`;
+  }).join('') || `<p style="font-size:13.5px;color:var(--ink-soft);padding:6px 0">No categories yet — add one below.</p>`;
+
+  const emojis = EMOJI_CHOICES.map(e=>`<button type="button" class="emoji-opt${e===pickedEmoji?' sel':''}" onclick="pickEmoji(this,'${e}')">${e}</button>`).join('');
+
+  openSheet(`<div class="form">
+    <h2>Categories</h2>
+    <div class="cat-manage-list">${rows}</div>
+    <div class="cat-add-box">
+      <div class="field" style="margin-bottom:12px"><label>New category</label><input id="c-name" placeholder="e.g. Soups" autocomplete="off"></div>
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:8px">Pick an icon</label>
+      <div class="emoji-grid" id="emoji-grid">${emojis}</div>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="addCat()">Add category</button>
+    </div>
+  </div>`);
+  setTimeout(()=>{ const n=document.getElementById('c-name'); if(n) n.focus(); },300);
+}
+
+function pickEmoji(btn, e){
+  pickedEmoji = e;
+  document.querySelectorAll('.emoji-opt').forEach(x=>x.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+function addCat(){
+  const input = document.getElementById('c-name');
+  const name = input.value.trim();
+  if(!name){ input.focus(); return; }
+  if(catNames().some(n=>n.toLowerCase()===name.toLowerCase())){
+    alert('A category with that name already exists.');
+    return;
+  }
+  const color = PALETTE[cats.length % PALETTE.length];
+  cats.push({name, e:pickedEmoji, bg:color.bg, fg:color.fg});
+  saveCats();
+  pushCloud();
+  openCats();
+  render();
+}
+
+function removeCat(name){
+  const count = recipes.filter(r=>r.cat===name).length;
+  const msg = count>0
+    ? `Delete “${name}”? ${count} recipe${count!==1?'s':''} will keep this label but it won’t appear as a tab.`
+    : `Delete the “${name}” category?`;
+  if(!confirm(msg)) return;
+  cats = cats.filter(c=>c.name!==name);
+  const key = name.toLowerCase();
+  if(!removedCatNames.includes(key)) removedCatNames.push(key);
+  if(activeCat===name) activeCat='All';
+  saveCats();
+  saveRemoved();
+  pushCloud();
+  openCats();
+  render();
+}
+
+function openBackup(){
+  const n = recipes.length;
+  openSheet(`<div class="form">
+    <h2>Backup &amp; sync</h2>
+    <p class="backup-note">You have ${n} recipe${n!==1?'s':''} saved.</p>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="shareData()">📤 Share (send to computer)</button>
+    <button class="btn btn-ghost" style="width:100%;margin-bottom:10px" onclick="exportData()">⬇ Export a backup file</button>
+    <button class="btn btn-ghost" style="width:100%" onclick="document.getElementById('import-file').click()">⬆ Import from file</button>
+    <input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importData(event)">
+  </div>`);
+}
+
+function dataPayload(){
+  return { app:'My Recipe Box', version:1, exportedAt:new Date().toISOString(), recipes, cats };
+}
+
+function downloadJSON(text, filename){
+  const blob = new Blob([text], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 150);
+}
+
+async function shareData(){
+  const text = JSON.stringify(dataPayload(), null, 2);
+  try{
+    const file = new File([text], 'recipes.json', {type:'application/json'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title:'My Recipe Box', text:'recipes.json for my Recipe Box app' });
+      return;
+    }
+  }catch(err){
+    if(err && err.name === 'AbortError') return; // user cancelled the share sheet
+  }
+  // Fallback when file-sharing isn't supported: download recipes.json instead
+  downloadJSON(text, 'recipes.json');
+}
+
+function exportData(){
+  try{
+    downloadJSON(JSON.stringify(dataPayload(), null, 2), `recipe-box-backup-${new Date().toISOString().slice(0,10)}.json`);
+  }catch(err){ alert('Sorry, the export could not be created.'); }
+}
+
+function importData(e){
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let data;
+    try { data = JSON.parse(reader.result); }
+    catch(err){ alert('That file could not be read. Please choose a Recipe Box backup file.'); return; }
+    const inRec = Array.isArray(data && data.recipes) ? data.recipes : null;
+    if(!inRec){ alert('This doesn’t look like a Recipe Box backup file.'); return; }
+
+    let addedCats = 0;
+    if(Array.isArray(data.cats)){
+      data.cats.forEach(c=>{
+        if(c && c.name && !cats.some(x=>x.name.toLowerCase()===String(c.name).toLowerCase())){
+          cats.push({name:String(c.name), e:c.e||'🍴', bg:c.bg||'#e7eef5', fg:c.fg||'#3d566e'});
+          addedCats++;
+        }
+      });
+    }
+
+    let added = 0, updated = 0;
+    inRec.forEach(r=>{
+      if(!r || !r.name) return;
+      const id = r.id || (Date.now() + Math.floor(Math.random()*100000));
+      const rec = {
+        id, name:String(r.name), cat:r.cat||'', time:r.time||'',
+        servings:r.servings||'', desc:r.desc||'',
+        ingredients:r.ingredients||'', steps:r.steps||''
+      };
+      const idx = recipes.findIndex(x=>x.id===id);
+      if(idx>=0){ recipes[idx]=rec; updated++; } else { recipes.push(rec); added++; }
+    });
+
+    save(); saveCats(); pushCloud(); closeSheet(); render();
+    const parts = [`${added} new recipe${added!==1?'s':''}`];
+    if(updated) parts.push(`${updated} updated`);
+    if(addedCats) parts.push(`${addedCats} categor${addedCats!==1?'ies':'y'}`);
+    alert('Imported ' + parts.join(', ') + '.');
+  };
+  reader.onerror = () => alert('The file could not be read. Please try again.');
+  reader.readAsText(file);
+}
+
+
+function viewRecipe(id){
+  const r = recipes.find(x=>x.id===id); if(!r) return;
+  const s = st(r.cat);
+  const ings = (r.ingredients||'').split('\n').filter(x=>x.trim()).map(x=>`<div class="ing-item"><span class="dot"></span><span>${esc(cardIngredient(x.trim()))}</span></div>`).join('');
+  const steps = (r.steps||'').split('\n').filter(x=>x.trim()).map((x,i)=>`<div class="step-item"><span class="step-num">${i+1}</span><span>${esc(x.trim().replace(/^\d+[\.\)]\s*/,''))}</span></div>`).join('');
+  openSheet(`<div class="view">
+    <div class="view-tag" style="background:${s.bg}">${s.e}</div>
+    <h2>${esc(r.name)}</h2>
+    <div class="meta">
+      <span style="color:${s.fg};font-weight:600">${r.cat}</span>
+      ${r.time?`<span>⏱ ${esc(r.time)}</span>`:''}
+      ${r.servings?`<span>🍽 ${esc(r.servings)} servings</span>`:''}
+    </div>
+    ${r.desc?`<div class="desc">“${esc(r.desc)}”</div>`:''}
+    ${ings?`<div class="sec-label">🧂 Ingredients</div>${ings}`:''}
+    ${steps?`<div class="sec-label">👩‍🍳 Directions</div>${steps}`:''}
+    <div class="view-actions">
+      <button class="btn btn-primary" onclick="openForm(${r.id})">✎ Edit</button>
+    </div>
+  </div>`);
+}
+
+function openForm(id){
+  editingId = id||null;
+  const r = id ? recipes.find(x=>x.id===id) : {name:'',cat:(cats[0]&&cats[0].name)||'',time:'',servings:'',desc:'',ingredients:'',steps:''};
+  openSheet(`<div class="form">
+    <h2>${id?'Edit recipe':'New recipe'}</h2>
+    <div class="field"><label>Recipe name</label><input id="f-name" value="${esc(r.name)}" placeholder="e.g. Grandma's lasagna"></div>
+    <div class="row2">
+      <div class="field"><label>Category</label><select id="f-cat">${cats.map(c=>`<option${r.cat===c.name?' selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>Time</label><input id="f-time" value="${esc(r.time)}" placeholder="45 min"></div>
+    </div>
+    <div class="field"><label>Servings</label><input id="f-servings" value="${esc(r.servings)}" placeholder="4"></div>
+    <div class="field"><label>Description</label><textarea id="f-desc" placeholder="A short note about this dish…">${esc(r.desc)}</textarea></div>
+    <div class="field">
+      <label>Ingredients</label>
+      <div class="line-list" id="ing-list"></div>
+      <button type="button" class="add-line" onclick="addLine('ing')"><span class="ap">+</span> Add ingredient</button>
+    </div>
+    <div class="field">
+      <label>Directions</label>
+      <div class="line-list" id="step-list"></div>
+      <button type="button" class="add-line" onclick="addLine('step')"><span class="ap">+</span> Add step</button>
+    </div>
+    <div class="view-actions">
+      ${id?`<button class="btn btn-danger" onclick="delRecipe(${id})">🗑</button>`:''}
+      <button class="btn btn-primary" onclick="saveForm()">${id?'Save':'Add'}</button>
+    </div>
+  </div>`);
+  const ing = (r.ingredients||'').split('\n').map(x=>x.trim()).filter(Boolean).map(parseIng);
+  const stp = (r.steps||'').split('\n').map(x=>stripEndPeriod(x.trim().replace(/^\d+[\.\)]\s*/,''))).filter(Boolean);
+  (ing.length?ing:[{amt:'',unit:'',name:''}]).forEach(v=>addLine('ing', v));
+  (stp.length?stp:['']).forEach(v=>addLine('step', v));
+  setTimeout(()=>document.getElementById('f-name').focus(),300);
+}
+
+function addLine(kind, data){
+  const list = document.getElementById(kind==='ing'?'ing-list':'step-list');
+  if(!list) return;
+  const row = document.createElement('div');
+  row.className = 'line-row';
+
+  if(kind==='ing'){
+    row.classList.add('ing-row');
+    const d = (typeof data==='object' && data) ? data : {amt:'',unit:'',name:''};
+    const opts = ['<option value="">unit</option>']
+      .concat(UNITS.map(u=>`<option${d.unit===u?' selected':''}>${u}</option>`)).join('');
+    row.innerHTML =
+      `<input type="text" inputmode="decimal" class="ing-amt" value="${esc(d.amt||'')}" placeholder="Qty" aria-label="Amount">`+
+      `<select class="ing-unit" aria-label="Unit">${opts}</select>`+
+      `<input type="text" class="ing-name" value="${esc(d.name||'')}" placeholder="Ingredient" aria-label="Ingredient">`+
+      `<button type="button" class="line-del" aria-label="Remove">✕</button>`;
+    row.querySelector('.ing-name').addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); addLine('ing'); }
+    });
+    row.querySelector('.line-del').addEventListener('click', ()=>{ row.remove(); });
+    list.appendChild(row);
+    if(data===undefined) row.querySelector('.ing-amt').focus();
+    return;
+  }
+
+  // step row (auto-numbered)
+  row.innerHTML = `<span class="line-bullet num-style"></span>`+
+    `<input type="text" value="${esc(data||'')}" placeholder="Describe this step…">`+
+    `<button type="button" class="line-del" aria-label="Remove">✕</button>`;
+  const input = row.querySelector('input');
+  input.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); addLine('step'); }
+  });
+  row.querySelector('.line-del').addEventListener('click', ()=>{ row.remove(); renumber('step'); });
+  list.appendChild(row);
+  renumber('step');
+  if(data===undefined) input.focus();
+}
+
+function parseIng(line){
+  line = String(line||'').trim();
+  let amt='', rest=line;
+  const sp = line.indexOf(' ');
+  if(sp>0){
+    const first = line.slice(0,sp);
+    if(/[0-9¼½¾⅓⅔⅛⅜⅝⅞]/.test(first) && /^[0-9¼½¾⅓⅔⅛⅜⅝⅞.\/-]+$/.test(first)){
+      amt = first; rest = line.slice(sp+1).trim();
+    }
+  }
+  const tokens = rest.split(/\s+/);
+  let unit='';
+  if(tokens.length){
+    const key = tokens[0].toLowerCase().replace(/[.,]+$/,'');
+    if(UNIT_ALIASES[key]){ unit = UNIT_ALIASES[key]; rest = tokens.slice(1).join(' '); }
+  }
+  return {amt, unit, name:stripEndPeriod(rest)};
+}
+
+function combineIng(amt, unit, name){
+  name = (name||'').trim();
+  if(!name) return '';
+  return [String(amt||'').trim(), unit||'', name].filter(Boolean).join(' ');
+}
+
+function capFirst(s){
+  s = String(s||'').replace(/^\s+/,'');
+  if(!s) return s;
+  // Only capitalize if the line actually starts with a letter
+  // (so "2 cups flour" keeps its number and unit untouched).
+  if(/^[a-z]/.test(s)) return s.charAt(0).toUpperCase() + s.slice(1);
+  return s;
+}
+
+function ensurePeriod(s){
+  s = String(s||'').replace(/\s+$/,'');
+  if(!s) return s;
+  if(/[.!?;:]$/.test(s)) return s;   // already ends with punctuation
+  return s + '.';
+}
+
+function tidyLine(s){ return ensurePeriod(capFirst(String(s||'').trim())); }
+function stripEndPeriod(s){ return String(s||'').replace(/\.+$/,'').trim(); }
+
+// Replace certain unit words with their abbreviations for the recipe card
+function cardIngredient(line){
+  const p = parseIng(line);
+  if(p.unit && UNIT_ABBR[p.unit]){
+    const rebuilt = [p.amt, UNIT_ABBR[p.unit], p.name].filter(Boolean).join(' ');
+    return ensurePeriod(rebuilt);
+  }
+  return line;
+}
+
+function renumber(kind){
+  if(kind!=='step') return;
+  const list = document.getElementById('step-list');
+  if(!list) return;
+  [...list.querySelectorAll('.line-bullet')].forEach((b,i)=>{ b.textContent = i+1; });
+}
+
+function collectLines(kind){
+  const list = document.getElementById(kind==='ing'?'ing-list':'step-list');
+  if(!list) return '';
+  if(kind==='ing'){
+    return [...list.querySelectorAll('.ing-row')].map(r=>{
+      const amt = r.querySelector('.ing-amt').value;
+      const unit = r.querySelector('.ing-unit').value;
+      const name = capFirst(r.querySelector('.ing-name').value.trim());
+      return combineIng(amt, unit, name);
+    }).filter(Boolean).map(tidyLine).join('\n');
+  }
+  return [...list.querySelectorAll('input')]
+    .map(i=>i.value.trim())
+    .filter(Boolean)
+    .map(tidyLine)
+    .join('\n');
+}
+
+function saveForm(){
+  const name = document.getElementById('f-name').value.trim();
+  if(!name){ document.getElementById('f-name').focus(); return; }
+  const desc = document.getElementById('f-desc').value.trim();
+  const data = {
+    id: editingId || Date.now(),
+    name: capFirst(name),
+    cat: document.getElementById('f-cat').value,
+    time: document.getElementById('f-time').value.trim(),
+    servings: document.getElementById('f-servings').value.trim(),
+    desc: desc ? tidyLine(desc) : '',
+    ingredients: collectLines('ing'),
+    steps: collectLines('step')
+  };
+  if(editingId){ const i=recipes.findIndex(x=>x.id===editingId); if(i>=0) recipes[i]=data; }
+  else recipes.push(data);
+  save(); pushCloud(); closeSheet(); render();
+}
+
+function delRecipe(id){
+  if(!confirm('Delete this recipe? This cannot be undone.')) return;
+  recipes = recipes.filter(x=>x.id!==id);
+  if(!removedRecipeIds.includes(id)) removedRecipeIds.push(id);
+  save(); saveRemoved(); pushCloud(); closeSheet(); render();
+}
+
+// Merge recipes/categories from the bundled recipes.json in the repo.
+// Anything already on the device, or anything the user has deleted
+// (tracked via tombstones), is left alone — so this only ADDS new items.
+function mergeBundledData(data){
+  if(!data || typeof data!=='object') return false;
+  let changed = false;
+
+  if(Array.isArray(data.cats)){
+    data.cats.forEach(c=>{
+      if(!c || !c.name) return;
+      const key = String(c.name).toLowerCase();
+      const exists = cats.some(x=>x.name.toLowerCase()===key);
+      if(!exists && !removedCatNames.includes(key)){
+        cats.push({ name:String(c.name), e:c.e||'🍴', bg:c.bg||'#e7eef5', fg:c.fg||'#3d566e' });
+        changed = true;
+      }
+    });
+  }
+
+  if(Array.isArray(data.recipes)){
+    data.recipes.forEach(r=>{
+      if(!r || !r.name || r.id===undefined || r.id===null) return;
+      const exists = recipes.some(x=>x.id===r.id);
+      if(!exists && !removedRecipeIds.includes(r.id)){
+        recipes.push({
+          id:r.id, name:String(r.name), cat:r.cat||'', time:r.time||'',
+          servings:r.servings||'', desc:r.desc||'',
+          ingredients:r.ingredients||'', steps:r.steps||''
+        });
+        changed = true;
+      }
+    });
+  }
+
+  if(changed){ save(); saveCats(); }
+  return changed;
+}
+
+function loadBundledData(){
+  // Cache-bust so a freshly committed recipes.json is picked up.
+  fetch('recipes.json?ts=' + Date.now(), {cache:'no-store'})
+    .then(res => res.ok ? res.json() : null)
+    .then(data => { if(mergeBundledData(data)){ pushCloud(); render(); } })
+    .catch(() => {});
+}
+
+render();
+loadBundledData();
+
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault(); deferredPrompt = e;
+  if(!localStorage.getItem('install_dismissed')) document.getElementById('install').classList.add('show');
+});
+document.getElementById('installBtn').addEventListener('click', async ()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install').classList.remove('show');
+});
+document.getElementById('installX').addEventListener('click', ()=>{
+  document.getElementById('install').classList.remove('show');
+  localStorage.setItem('install_dismissed','1');
+});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import {
+  getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence
+} from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAoWbA-yOAWbnw0R8ZWGwLO9V3K_GsbLwg",
+  authDomain: "recipebox-ljs.firebaseapp.com",
+  projectId: "recipebox-ljs",
+  storageBucket: "recipebox-ljs.firebasestorage.app",
+  messagingSenderId: "504457472736",
+  appId: "1:504457472736:web:bfe0589cb1448a7755fe85",
+  measurementId: "G-JX88KXY4RQ"
+};
+
+try {
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  // Best-effort offline cache; ignored if a tab already holds it.
+  enableIndexedDbPersistence(db).catch(()=>{});
+
+  // One shared document holds the whole collection.
+  const ref = doc(db, "boxes", "shared");
+
+  // Push local state to the cloud (debounced a touch to batch quick edits).
+  let pushTimer = null;
+  window.cloudPush = (state) => {
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(() => {
+      setDoc(ref, { ...state, updatedAt: Date.now() })
+        .then(() => window.setSyncStatus && window.setSyncStatus('synced'))
+        .catch(() => window.setSyncStatus && window.setSyncStatus('offline'));
+    }, 400);
+  };
+
+  // Live updates from any device.
+  onSnapshot(ref, (snap) => {
+    window.setSyncStatus && window.setSyncStatus('synced');
+    if (snap.exists() && typeof window.applyCloud === 'function') {
+      window.applyCloud(snap.data());
+    } else if (!snap.exists()) {
+      // First run ever: seed the cloud doc from whatever this device has.
+      if (typeof window.cloudPush === 'function' && typeof window.currentStateBridge === 'function') {
+        window.cloudPush(window.currentStateBridge());
+      }
+    }
+  }, () => {
+    window.setSyncStatus && window.setSyncStatus('offline');
+  });
+
+  window.addEventListener('online',  () => window.setSyncStatus && window.setSyncStatus('connecting'));
+  window.addEventListener('offline', () => window.setSyncStatus && window.setSyncStatus('offline'));
+} catch (err) {
+  // If Firebase fails to load, the app still works fully offline/local.
+  window.setSyncStatus && window.setSyncStatus('offline');
+}
+</script>
+</body>
+</html>
