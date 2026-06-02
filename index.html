@@ -141,6 +141,40 @@ header{
 }
 .fab:active{transform:translateX(-50%) scale(.95)}
 .fab .plus{font-size:22px;line-height:1;margin-top:-2px}
+.fab.hidden{transform:translateX(-50%) translateY(120px);opacity:0;pointer-events:none}
+
+.list-tools{display:flex;align-items:center;gap:12px;padding:4px 20px 0}
+.tool-btn{border:1px solid var(--line);background:var(--cream-card);border-radius:18px;padding:6px 14px;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:all .15s}
+.tool-btn.active{background:var(--ink);color:var(--cream);border-color:var(--ink)}
+.tool-hint{font-size:12.5px;color:var(--ink-soft)}
+
+.card.selectable{padding-left:14px}
+.card .sel-check{flex:0 0 auto;width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:none;align-items:center;justify-content:center;color:#fff;font-size:14px;transition:all .15s}
+.card.selectable .sel-check{display:flex}
+.card.selected{border-color:var(--terra);box-shadow:0 0 0 2px rgba(94,155,209,.35)}
+.card.selected .sel-check{background:var(--terra);border-color:var(--terra)}
+.card.selectable .chev{display:none}
+
+.select-bar{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(120px);
+  bottom:calc(var(--safe-bottom) + 18px);z-index:31;
+  display:flex;gap:10px;align-items:center;
+  background:var(--cream-card);border:1px solid var(--line);
+  border-radius:30px;padding:8px 8px 8px 18px;
+  box-shadow:0 8px 26px rgba(51,41,31,.18);
+  opacity:0;pointer-events:none;transition:transform .25s cubic-bezier(.32,.72,0,1),opacity .2s;
+}
+.select-bar.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto}
+.sb-cancel{border:none;background:transparent;font-family:inherit;font-size:14px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:8px}
+.sb-make{border:none;background:var(--terra);color:#fff;font-family:inherit;font-size:14.5px;font-weight:600;border-radius:22px;padding:11px 18px;cursor:pointer;transition:opacity .15s}
+.sb-make:disabled{opacity:.45;cursor:default}
+
+.shop-item{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--line-soft);cursor:pointer;font-size:15px}
+.shop-item .box{flex:0 0 auto;width:22px;height:22px;border-radius:6px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;transition:all .12s}
+.shop-item.done .box{background:var(--terra);border-color:var(--terra)}
+.shop-item.done .label{text-decoration:line-through;color:var(--ink-soft);opacity:.7}
+.shop-item .qty{font-weight:600;color:var(--terra-dark);margin-right:2px}
+.shop-sub{font-size:13px;color:var(--ink-soft);margin:-2px 0 14px}
 
 .scrim{position:fixed;inset:0;background:rgba(51,41,31,.5);z-index:40;opacity:0;pointer-events:none;transition:opacity .22s}
 .scrim.show{opacity:1;pointer-events:auto}
@@ -206,6 +240,8 @@ header{
 .ing-row .ing-unit{flex:0 0 108px;width:108px;border:1px solid var(--line);border-radius:11px;background:var(--cream-card);padding:10px 8px;font-size:14px;font-family:inherit;color:var(--ink);height:auto}
 .ing-row .ing-unit:focus{outline:none;border-color:var(--terra);box-shadow:0 0 0 3px rgba(94,155,209,.13)}
 .line-del{flex:0 0 auto;width:30px;height:30px;border:none;background:transparent;color:var(--ink-soft);font-size:17px;cursor:pointer;border-radius:8px;opacity:.55;transition:opacity .15s}
+.line-ins{flex:0 0 auto;width:30px;height:30px;border:none;background:transparent;color:var(--terra);font-size:18px;line-height:1;cursor:pointer;border-radius:8px;opacity:.7;transition:opacity .15s}
+.line-ins:active,.line-del:active{opacity:1}
 .line-del:active{opacity:1}
 .add-line{display:flex;align-items:center;gap:8px;border:1px dashed var(--line);background:transparent;border-radius:11px;padding:10px 12px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--terra);cursor:pointer;width:100%;transition:background .15s}
 .add-line:active{background:rgba(94,155,209,.06)}
@@ -253,9 +289,19 @@ header{
   </div>
 
   <div class="chips" id="chips"></div>
+
+  <div class="list-tools" id="list-tools">
+    <button class="chip chip-add" id="select-toggle" onclick="toggleSelectMode()">Create Shopping List</button>
+    <span class="tool-hint" id="select-hint"></span>
+  </div>
+
   <div class="list" id="list"></div>
 
   <button class="fab" onclick="openForm()"><span class="plus">+</span> Add recipe</button>
+  <div class="select-bar" id="select-bar">
+    <button class="sb-cancel" onclick="toggleSelectMode()">Cancel</button>
+    <button class="sb-make" id="sb-make" onclick="makeShoppingList()">🛒 Shopping list</button>
+  </div>
 </div>
 
 <div class="scrim" id="scrim" onclick="closeSheet()"></div>
@@ -379,7 +425,10 @@ function render(){
   }
   el.innerHTML = list.map((r,i)=>{
     const s = st(r.cat);
-    return `<div class="card" style="animation-delay:${i*0.03}s" onclick="viewRecipe(${r.id})">
+    const sel = selectedIds.has(r.id);
+    const onclick = selectMode ? `toggleSelect(${r.id})` : `viewRecipe(${r.id})`;
+    return `<div class="card${selectMode?' selectable':''}${sel?' selected':''}" style="animation-delay:${i*0.03}s" onclick="${onclick}">
+      <div class="sel-check">${sel?'✓':''}</div>
       <div class="card-tag" style="background:${s.bg}">${s.e}</div>
       <div class="card-body">
         <span class="cat-pill" style="background:${s.bg};color:${s.fg}">${r.cat}</span>
@@ -393,6 +442,35 @@ function render(){
     </div>`;
   }).join('');
   updateChipFades();
+  updateSelectUI();
+}
+
+let selectMode = false;
+let selectedIds = new Set();
+
+function toggleSelectMode(){
+  selectMode = !selectMode;
+  if(!selectMode) selectedIds.clear();
+  render();
+}
+
+function toggleSelect(id){
+  if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  render();
+}
+
+function updateSelectUI(){
+  const toggle = document.getElementById('select-toggle');
+  const hint = document.getElementById('select-hint');
+  const bar = document.getElementById('select-bar');
+  const fab = document.querySelector('.fab');
+  const make = document.getElementById('sb-make');
+  if(!toggle) return;
+  toggle.textContent = selectMode ? 'Selecting…' : 'Create Shopping List';
+  hint.textContent = selectMode ? (selectedIds.size ? `${selectedIds.size} selected` : 'Tap recipes to add') : '';
+  if(bar) bar.classList.toggle('show', selectMode);
+  if(fab) fab.classList.toggle('hidden', selectMode);
+  if(make) make.disabled = selectedIds.size===0;
 }
 
 function updateChipFades(){
@@ -725,7 +803,7 @@ function openForm(id){
   setTimeout(()=>document.getElementById('f-name').focus(),300);
 }
 
-function addLine(kind, data){
+function addLine(kind, data, afterRow){
   const list = document.getElementById(kind==='ing'?'ing-list':'step-list');
   if(!list) return;
   const row = document.createElement('div');
@@ -740,12 +818,14 @@ function addLine(kind, data){
       `<input type="text" inputmode="decimal" class="ing-amt" value="${esc(d.amt||'')}" placeholder="Qty" aria-label="Amount">`+
       `<select class="ing-unit" aria-label="Unit">${opts}</select>`+
       `<input type="text" class="ing-name" value="${esc(d.name||'')}" placeholder="Ingredient" aria-label="Ingredient">`+
+      `<button type="button" class="line-ins" aria-label="Insert below" title="Insert a line below">＋</button>`+
       `<button type="button" class="line-del" aria-label="Remove">✕</button>`;
     row.querySelector('.ing-name').addEventListener('keydown', e=>{
-      if(e.key==='Enter'){ e.preventDefault(); addLine('ing'); }
+      if(e.key==='Enter'){ e.preventDefault(); addLine('ing', undefined, row); }
     });
+    row.querySelector('.line-ins').addEventListener('click', ()=>{ addLine('ing', undefined, row); });
     row.querySelector('.line-del').addEventListener('click', ()=>{ row.remove(); });
-    list.appendChild(row);
+    if(afterRow && afterRow.parentNode===list) afterRow.after(row); else list.appendChild(row);
     if(data===undefined) row.querySelector('.ing-amt').focus();
     return;
   }
@@ -753,13 +833,15 @@ function addLine(kind, data){
   // step row (auto-numbered)
   row.innerHTML = `<span class="line-bullet num-style"></span>`+
     `<input type="text" value="${esc(data||'')}" placeholder="Describe this step…">`+
+    `<button type="button" class="line-ins" aria-label="Insert below" title="Insert a step below">＋</button>`+
     `<button type="button" class="line-del" aria-label="Remove">✕</button>`;
   const input = row.querySelector('input');
   input.addEventListener('keydown', e=>{
-    if(e.key==='Enter'){ e.preventDefault(); addLine('step'); }
+    if(e.key==='Enter'){ e.preventDefault(); addLine('step', undefined, row); }
   });
+  row.querySelector('.line-ins').addEventListener('click', ()=>{ addLine('step', undefined, row); });
   row.querySelector('.line-del').addEventListener('click', ()=>{ row.remove(); renumber('step'); });
-  list.appendChild(row);
+  if(afterRow && afterRow.parentNode===list) afterRow.after(row); else list.appendChild(row);
   renumber('step');
   if(data===undefined) input.focus();
 }
@@ -816,6 +898,134 @@ function cardIngredient(line){
     return ensurePeriod(rebuilt);
   }
   return line;
+}
+
+// --- Shopping list ---
+const FRACTION_MAP = {'¼':0.25,'½':0.5,'¾':0.75,'⅓':1/3,'⅔':2/3,'⅛':0.125,'⅜':0.375,'⅝':0.625,'⅞':0.875,'⅙':1/6,'⅚':5/6};
+// Parse an amount string ("1", "1½", "1 1/2", "1/2", "0.5") into a number, or null if not numeric.
+function parseAmount(a){
+  a = String(a||'').trim();
+  if(!a) return null;
+  let total = 0, matched = false;
+  // unicode fractions possibly attached to a leading integer e.g. 1½
+  a = a.replace(/(\d+)?\s*([¼½¾⅓⅔⅛⅜⅝⅞⅙⅚])/g, (m,intPart,frac)=>{
+    matched = true;
+    if(intPart) total += parseFloat(intPart);
+    total += FRACTION_MAP[frac]||0;
+    return ' ';
+  });
+  // remaining tokens: integers, decimals, simple fractions a/b
+  a.split(/\s+/).forEach(tok=>{
+    if(!tok) return;
+    if(/^\d+\/\d+$/.test(tok)){ const [n,d]=tok.split('/').map(Number); if(d){ total+=n/d; matched=true; } }
+    else if(/^\d*\.?\d+$/.test(tok)){ total += parseFloat(tok); matched=true; }
+  });
+  return matched ? total : null;
+}
+// Turn a number back into a tidy amount with common fractions.
+function formatAmount(n){
+  if(n===null || isNaN(n)) return '';
+  const whole = Math.floor(n + 1e-9);
+  const frac = n - whole;
+  const fracs = [[0,''],[0.125,'⅛'],[0.25,'¼'],[1/3,'⅓'],[0.375,'⅜'],[0.5,'½'],[0.625,'⅝'],[2/3,'⅔'],[0.75,'¾'],[0.875,'⅞'],[1,'']];
+  let best = fracs[0], bestD = Math.abs(frac - fracs[0][0]);
+  for(const f of fracs){ const d=Math.abs(frac-f[0]); if(d<bestD){ bestD=d; best=f; } }
+  let w = whole, sym = best[1];
+  if(best[0]===1){ w += 1; sym=''; }
+  if(bestD > 0.04 && !sym){ // not close to a nice fraction → show a decimal
+    return (Math.round(n*100)/100).toString();
+  }
+  if(w===0 && sym) return sym;
+  if(w===0 && !sym) return '0';
+  return sym ? `${w}${sym}` : `${w}`;
+}
+
+function makeShoppingList(){
+  const chosen = recipes.filter(r=>selectedIds.has(r.id));
+  if(!chosen.length) return;
+
+  // key = lowercased ingredient name + '|' + unit; merge quantities.
+  const map = new Map();
+  chosen.forEach(r=>{
+    (r.ingredients||'').split('\n').map(x=>x.trim()).filter(Boolean).forEach(line=>{
+      const p = parseIng(line);            // {amt, unit, name}
+      const nameKey = stripEndPeriod(p.name).toLowerCase();
+      if(!nameKey) return;
+      const key = nameKey + '|' + (p.unit||'');
+      const qty = parseAmount(p.amt);
+      if(!map.has(key)){
+        map.set(key, { name:stripEndPeriod(p.name), unit:p.unit||'', total: qty, hasUnknown: qty===null && !!p.amt, count:1, rawAmts: qty===null && p.amt ? [p.amt] : [] });
+      } else {
+        const it = map.get(key);
+        if(qty===null){ if(p.amt){ it.hasUnknown=true; it.rawAmts.push(p.amt); } }
+        else { it.total = (it.total===null? qty : it.total + qty); }
+        it.count++;
+      }
+    });
+  });
+
+  const items = [...map.values()].map((it,i)=>{
+    const abbr = it.unit && UNIT_ABBR[it.unit] ? UNIT_ABBR[it.unit] : it.unit;
+    let qtyStr = '';
+    if(it.total!==null){ qtyStr = [formatAmount(it.total), abbr].filter(Boolean).join(' '); }
+    else if(it.rawAmts.length){ qtyStr = it.rawAmts.join(' + ') + (abbr?` ${abbr}`:''); }
+    return { id:'s'+i, qty:qtyStr, name:it.name };
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+
+  shoppingItems = items;           // remember for toggling
+  const names = chosen.map(r=>esc(r.name)).join(', ');
+  const rows = items.map(it=>`
+    <div class="shop-item" id="${it.id}" onclick="toggleShopItem('${it.id}')">
+      <span class="box"></span>
+      <span class="label"><span class="qty">${esc(it.qty)}</span> ${esc(it.name)}</span>
+    </div>`).join('');
+
+  openSheet(`<div class="form">
+    <h2>Shopping list</h2>
+    <p class="shop-sub">From: ${names}</p>
+    ${rows || '<p class="backup-note">No ingredients found.</p>'}
+    <div class="view-actions" style="margin-top:20px">
+      <button class="btn btn-ghost" onclick="printShoppingList()">📄 Share / PDF</button>
+      <button class="btn btn-primary" onclick="closeSheet();exitSelect()">Done</button>
+    </div>
+  </div>`);
+}
+
+let shoppingItems = [];
+function toggleShopItem(id){
+  const el = document.getElementById(id);
+  if(el) el.classList.toggle('done');
+}
+function exitSelect(){ selectMode=false; selectedIds.clear(); render(); }
+
+function printShoppingList(){
+  const rows = shoppingItems.map(it=>`<li><span class="q">${esc(it.qty)}</span> ${esc(it.name)}</li>`).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopping List</title>
+<style>
+  :root{ --card:#fffdf8; --blue:#5e9bd1; --ink:#33291f; --line:rgba(51,41,31,.1); --serif:'Fraunces',Georgia,'Palatino Linotype',Palatino,serif; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--card);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-family:Georgia,serif;color:var(--ink);max-width:600px;margin:0 auto;padding:36px 30px}
+  h1{font-family:var(--serif);font-size:30px;margin-bottom:18px}
+  ul{list-style:none}
+  li{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:16px}
+  li:before{content:'';flex:0 0 auto;width:18px;height:18px;border:2px solid var(--blue);border-radius:5px}
+  .q{font-weight:bold;color:var(--blue)}
+  .noprint{position:fixed;top:14px;right:14px;display:flex;gap:8px}
+  .noprint button{font-family:Arial,sans-serif;font-size:14px;font-weight:600;border:none;border-radius:11px;padding:11px 16px;cursor:pointer}
+  .pbtn{background:var(--blue);color:#fff}.cbtn{background:#eee;color:#333}
+  @media print{ .noprint{display:none} }
+</style></head><body>
+  <div class="noprint"><button class="cbtn" onclick="window.close()">Close</button><button class="pbtn" onclick="window.print()">Save / Share PDF</button></div>
+  <h1>Shopping List</h1>
+  <ul>${rows}</ul>
+  <script>window.addEventListener('load',function(){setTimeout(function(){try{window.print();}catch(e){}},400);});<\/script>
+</body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ alert('Please allow pop-ups for this site to create the PDF.'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 function renumber(kind){
